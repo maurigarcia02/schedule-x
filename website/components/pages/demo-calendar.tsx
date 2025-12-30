@@ -1,134 +1,81 @@
 'use client'
 
-import {
-  CalendarApp,
-  createCalendar,
-  viewDay,
-  viewMonthAgenda,
-  viewMonthGrid,
-  viewWeek,
-} from '@schedule-x/calendar'
+import { viewDay, viewMonthGrid, viewWeek } from '@schedule-x/calendar'
 import { createDragAndDropPlugin } from '@schedule-x/drag-and-drop'
 import { createEventModalPlugin } from '@schedule-x/event-modal'
+import { ScheduleXCalendar, useNextCalendarApp } from '@schedule-x/react'
 import '@schedule-x/theme-default/dist/index.css'
-import { useEffect, useState } from 'react'
-import CodeMirror from '@uiw/react-codemirror'
-import { javascript } from '@codemirror/lang-javascript'
-import { githubDarkInit, githubLightInit } from '@uiw/codemirror-theme-github'
-import { calendarDemoCode } from './__data__/calendar-code'
-import HeadingWithIcon from '../partials/heading-with-icon/heading-with-icon'
-import styles from './demo.module.scss'
-import { useTheme } from 'nextra-theme-docs'
 import 'temporal-polyfill/global'
+import { useState } from 'react'
 
 export default function CalendarDemoPage() {
-  const { resolvedTheme } = useTheme()
+  const [events, setEvents] = useState([
+    {
+      id: 1,
+      title: 'Coffee with John',
+      description: 'Discuss project updates',
+      location: 'Starbucks Downtown',
+      people: ['John Doe', 'Jane Smith'],
+      start: Temporal.ZonedDateTime.from('2023-12-04T10:05:00+01:00[Europe/Berlin]'),
+      end: Temporal.ZonedDateTime.from('2023-12-04T10:35:00+01:00[Europe/Berlin]'),
+    },
+    {
+      id: 2,
+      title: 'Team Meeting',
+      start: Temporal.ZonedDateTime.from('2023-12-04T14:00:00+01:00[Europe/Berlin]'),
+      end: Temporal.ZonedDateTime.from('2023-12-04T15:30:00+01:00[Europe/Berlin]'),
+    },
+  ])
 
-  const [cal, setCal] = useState<CalendarApp|null>(null)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const calendarEl = document.getElementById('calendar') as HTMLElement
-
-    const calendar = createCalendar({
-      views: [viewMonthGrid, viewMonthAgenda, viewWeek, viewDay],
-      selectedDate: Temporal.PlainDate.from('2023-12-01'),
-      isDark: resolvedTheme === 'dark',
-      defaultView: viewWeek.name,
-      timezone: 'America/New_York',
-      events: [
-        {
-          id: 1,
-          title: 'Coffee with John',
-          start: Temporal.PlainDate.from('2023-12-01'),
-          end: Temporal.PlainDate.from('2023-12-01'),
-        },
-        {
-          id: 2,
-          title: 'Breakfast with Sam',
-          description: 'Discuss the new project',
-          location: 'Starbucks',
-          start: Temporal.ZonedDateTime.from('2023-11-29T05:00:00+00:00[America/New_York]'),
-          end: Temporal.ZonedDateTime.from('2023-11-29T06:00:00+00:00[America/New_York]'),
-        },
-        {
-          id: 3,
-          title: 'Gym',
-          start: Temporal.ZonedDateTime.from('2023-11-27T06:00:00+00:00[America/New_York]'),
-          end: Temporal.ZonedDateTime.from('2023-11-27T07:00:00+00:00[America/New_York]'),
-          calendarId: 'leisure',
-        },
-        {
-          id: 4,
-          title: 'Media fasting',
-          start: Temporal.PlainDate.from('2023-12-01'),
-          end: Temporal.PlainDate.from('2023-12-03'),
-          calendarId: 'leisure',
-        },
-        {
-          id: 5,
-          title: 'Some appointment',
-          people: ['John'],
-          start: Temporal.ZonedDateTime.from('2023-12-03T03:00:00+00:00[America/New_York]'),
-          end: Temporal.ZonedDateTime.from('2023-12-03T04:30:00+00:00[America/New_York]'),
-        },
-        {
-          id: 6,
-          title: 'Other appointment',
-          people: ['Susan', 'Mike'],
-          start: Temporal.ZonedDateTime.from('2023-12-03T03:00:00+00:00[America/New_York]'),
-          end: Temporal.ZonedDateTime.from('2023-12-03T04:30:00+00:00[America/New_York]'),
-          calendarId: 'leisure',
-        },
-      ],
-      calendars: {
-        leisure: {
-          colorName: 'leisure',
-          lightColors: {
-            main: '#1c7df9',
-            container: '#d2e7ff',
-            onContainer: '#002859',
-          },
-          darkColors: {
-            main: '#c0dfff',
-            onContainer: '#dee6ff',
-            container: '#426aa2',
-          },
-        },
+  const calendarApp = useNextCalendarApp({
+    views: [viewWeek, viewMonthGrid, viewDay],
+    defaultView: viewWeek.name,
+    selectedDate: Temporal.PlainDate.from('2023-12-04'),
+    events: events,
+    callbacks: {
+      onEventUpdate(updatedEvent) {
+        console.log('Event updated:', updatedEvent)
+        setEvents(events.map(e => e.id === updatedEvent.id ? updatedEvent : e))
       },
-      plugins: [createDragAndDropPlugin(), createEventModalPlugin()],
-    })
-    calendar.render(calendarEl)
-    setCal(calendar)
-  }, [])
-
-  useEffect(() => {
-    if (!cal) return
-
-    cal.setTheme(resolvedTheme === 'dark' ? 'dark' : 'light')
-  }, [resolvedTheme])
+      onEventClick(calendarEvent) {
+        console.log('Event clicked:', calendarEvent)
+      },
+      onDoubleClickDateTime(dateTime) {
+        console.log('Double clicked on date time:', dateTime)
+        // Create new event
+        const newEvent = {
+          id: Date.now(),
+          title: 'New Event',
+          start: dateTime,
+          end: dateTime.add({ hours: 1 }),
+        }
+        setEvents([...events, newEvent])
+      },
+      onDoubleClickDate(date) {
+        console.log('Double clicked on date:', date)
+        // Create all-day event
+        const newEvent = {
+          id: Date.now(),
+          title: 'New All-Day Event',
+          start: date,
+          end: date,
+        }
+        setEvents([...events, newEvent])
+      },
+    },
+    plugins: [
+      createDragAndDropPlugin(),
+      createEventModalPlugin(),
+    ],
+  })
 
   return (
-    <div className={['page-wrapper', styles.demoPageWrapper].join(' ')}>
-      <HeadingWithIcon icon={'🗓️'} text={'Calendar demo'} />
-
-      <div id="calendar" className="calendar-wrapper" />
-
-      <h2 className={styles.demoSubheading}>Code</h2>
-
-      <p className={styles.calendarDemoText}>
-        The demo above is based on the code below.
-      </p>
-
-      <CodeMirror
-        className={styles.calendarDemoCode}
-        value={calendarDemoCode}
-        height="800px"
-        extensions={[javascript({ jsx: true })]}
-        onChange={() => null}
-        theme={resolvedTheme === 'dark' ? githubDarkInit() : githubLightInit()}
-      />
+    <div className="page-wrapper">
+      <h1>Schedule-X Calendar Demo</h1>
+      <p>💡 Double-click on any time slot to create a new event</p>
+      <div style={{ width: '100%', height: '800px' }}>
+        <ScheduleXCalendar calendarApp={calendarApp} />
+      </div>
     </div>
   )
 }
